@@ -7,6 +7,7 @@ import ReactFlow, {
     ReactFlowProvider,
     MarkerType
 } from 'reactflow';
+import { Popover, ConfigProvider } from 'antd';
 import 'reactflow/dist/style.css';
 
 import './index.css';
@@ -103,7 +104,7 @@ const initialNodes = [
             }
         ]
     }
-]
+];
 
 const initialEdges = [
     {
@@ -111,6 +112,7 @@ const initialEdges = [
         source: '0',
         target: '1',
         label: '+',
+        animated: true,
         labelBgPadding: [8, 4],
         labelBgBorderRadius: 4,
         labelBgStyle: { fill: '#FFCC00', color: '#fff', fillOpacity: 0.7 },
@@ -118,13 +120,13 @@ const initialEdges = [
             type: MarkerType.ArrowClosed,
         },
     }
-]
+];
 
 let id = 1;
 const getId = () => `${id++}`;
 
 const fitViewOptions = {
-    padding: 1,
+    padding: 2,
 };
 
 const ExpandAndCollapse = (props) => {
@@ -132,8 +134,7 @@ const ExpandAndCollapse = (props) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [isConnecting, setIsConnecting] = useState(false);
-
-    // const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
+    const [hoveredNodeId, setHoveredNodeId] = useState(null);
 
     const isConnectionAllowed = (sourceId, targetId) => {
         const sourceNode = nodes.find((node) => node.id === sourceId);
@@ -143,9 +144,7 @@ const ExpandAndCollapse = (props) => {
     };
 
     const onConnectStart = (event, { nodeId, handleType }) => {
-
         if (handleType === 'source') {
-
             setIsConnecting(false);
         }
     };
@@ -162,8 +161,6 @@ const ExpandAndCollapse = (props) => {
         setEdges((eds) => addEdge(params, eds));
     };
 
-    
-
     useEffect(() => {
         setNodes([...initialNodes.map((item) => {
             return {
@@ -174,115 +171,80 @@ const ExpandAndCollapse = (props) => {
                 sourcePosition: 'right',
                 targetPosition: 'left',
                 isConnectable: false,
-            }
+            };
         })])
     }, [])
 
-
-    // const handleNodeClick = (e, data) => {
-    //     const findChildren = nodes.filter((item) => item?.data?.parent === data.id)
-    //     if (!findChildren.length) {
-    //         const itemChildren = [...data.data.children.map((item, i) => {
-    //             return {
-    //                 id: item.id,
-    //                 type: item?.children?.length ? 'default' : 'output',
-    //                 data: { label: item.name, children: item.children, parent: item.parent },
-    //                 position: { x: data.position.x + 200, y: i === 0 ? data.position.y : data.position.y + i * 100 },
-    //                 sourcePosition: 'right',
-    //                 targetPosition: 'left'
-    //             }
-    //         })]
-    //         setEdges([
-    //             ...edges,
-    //             ...itemChildren.map((item) => {
-    //                 return {
-    //                     id: String(parseInt(Math.random(100000000) * 1000000)),
-    //                     source: item?.data?.parent,
-    //                     target: item?.id,
-    //                     markerEnd: {
-    //                         type: MarkerType.ArrowClosed,
-    //                     },
-    //                 }
-    //             })
-    //         ])
-    //         setNodes(nodes.concat(itemChildren))
-    //     } else {
-    //         setNodes([
-    //             ...nodes.filter((item) => item?.data?.parent !== data.id)
-    //         ])
-    //         setEdges([
-    //             ...edges.filter((item) => data.id !== item.source)
-    //         ])
-    //     }
-    // }
-
     const handleNodeClick = async (e, data) => {
         const findChildren = nodes.filter((item) => item?.data?.parent === data.id);
-    
+
         if (!findChildren.length) {
-          const itemChildren = [...data.data.children.map((item, i) => {
-            return {
-              id: item.id,
-              type: item?.children?.length ? 'default' : 'output',
-              data: { label: item.name, children: item.children, parent: item.parent },
-              position: { x: data.position.x + 200, y: i === 0 ? data.position.y : data.position.y + i * 100 },
-              sourcePosition: 'right',
-              targetPosition: 'left',
-            };
-          })];
-    
-          for (let i = 0; i < itemChildren.length; i++) {
-            const item = itemChildren[i];
-            await new Promise((resolve) => setTimeout(resolve, 700));
-    
-            setNodes((prevNodes) => [...prevNodes, item]);
-            setEdges((prevEdges) => [
-              ...prevEdges,
-              {
-                id: String(parseInt(Math.random(100000000) * 1000000)),
-                source: item.data.parent,
-                target: item.id,
-                markerEnd: {
-                  type: MarkerType.ArrowClosed,
-                },
-              },
-            ]);
-          }
+            const itemChildren = [...data.data.children.map((item, i) => {
+                return {
+                    id: item.id,
+                    type: item?.children?.length ? 'default' : 'output',
+                    data: { label: item.name, children: item.children, parent: item.parent },
+                    position: { x: data.position.x + 200, y: i === 0 ? data.position.y : data.position.y + i * 100 },
+                    sourcePosition: 'right',
+                    targetPosition: 'left',
+                };
+            })];
+
+            for (let i = 0; i < itemChildren.length; i++) {
+                const item = itemChildren[i];
+                await new Promise((resolve) => setTimeout(resolve, 700));
+
+                setNodes((prevNodes) => [...prevNodes, item]);
+                setEdges((prevEdges) => [
+                    ...prevEdges,
+                    {
+                        id: String(parseInt(Math.random(100000000) * 1000000)),
+                        source: item.data.parent,
+                        target: item.id,
+                        markerEnd: {
+                            type: MarkerType.ArrowClosed,
+                        },
+                    },
+                ]);
+            }
         } else {
-          setNodes((prevNodes) => [
-            ...prevNodes.filter((item) => item?.data?.parent !== data.id),
-          ]);
-    
-          setEdges((prevEdges) => [
-            ...prevEdges.filter((item) => data.id !== item.source),
-          ]);
+            setNodes((prevNodes) => [
+                ...prevNodes.filter((item) => item?.data?.parent !== data.id),
+            ]);
+
+            setEdges((prevEdges) => [
+                ...prevEdges.filter((item) => data.id !== item.source),
+            ]);
         }
-      };
+    };
 
     return (
         <div className="wrapper" ref={reactFlowWrapper}>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onConnectStart={onConnectStart}
-                onConnectStop={onConnectStop}
-                onNodeClick={handleNodeClick}
-                fitView
-                maxZoom={0.9}
-                defaultViewport={{ x: 1, y: 1, zoom: 0.4 }}
-                fitViewOptions={fitViewOptions}
-            >
-                <Controls />
-            </ReactFlow>
+            <ReactFlowProvider>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    onConnectStart={onConnectStart}
+                    onConnectStop={onConnectStop}
+                    onNodeClick={handleNodeClick}
+                    fitView
+                    maxZoom={0.9}
+                    defaultViewport={{ x: 1, y: 1, zoom: 0.4 }}
+                    fitViewOptions={fitViewOptions}
+                >
+                    <Controls />
+
+                </ReactFlow>
+            </ReactFlowProvider>
         </div>
     );
 };
 
 export default () => (
-    <ReactFlowProvider>
+    <ConfigProvider>
         <ExpandAndCollapse />
-    </ReactFlowProvider>
+    </ConfigProvider>
 );
